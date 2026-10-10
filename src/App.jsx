@@ -1,28 +1,52 @@
-
 import { useEffect, useState } from "react";
 import "./App.css";
 
 const API = "http://localhost:5000/api";
 
-// Parse the problem statement's timezone-free local datetime.
-// UTC is used only for safe arithmetic; the real system clock is never used.
+// The problem statement uses local YYYY-MM-DDTHH:MM values without time zones.
+// Use UTC only for date arithmetic; never use the real system clock for rules.
 function toMinutes(value) {
-  if (!value || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) {
+  if (
+    typeof value !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)
+  ) {
     return NaN;
   }
 
-  const [date, time] = value.split("T");
-  const [year, month, day] = date.split("-").map(Number);
-  const [hour, minute] = time.split(":").map(Number);
+  const [datePart, timePart] = value.split("T");
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hour, minute] = timePart.split(":").map(Number);
 
-  return Date.UTC(year, month - 1, day, hour, minute) / 60000;
+  if (
+    month < 1 || month > 12 ||
+    day < 1 || day > 31 ||
+    hour < 0 || hour > 23 ||
+    minute < 0 || minute > 59
+  ) {
+    return NaN;
+  }
+
+  const timestamp = Date.UTC(year, month - 1, day, hour, minute);
+  const check = new Date(timestamp);
+
+  if (
+    check.getUTCFullYear() !== year ||
+    check.getUTCMonth() + 1 !== month ||
+    check.getUTCDate() !== day ||
+    check.getUTCHours() !== hour ||
+    check.getUTCMinutes() !== minute
+  ) {
+    return NaN;
+  }
+
+  return timestamp / 60000;
 }
 
 function fromMinutes(value) {
   if (!Number.isFinite(value)) return "";
 
   const date = new Date(value * 60000);
-  const pad = (n) => String(n).padStart(2, "0");
+  const pad = (number) => String(number).padStart(2, "0");
 
   return (
     `${date.getUTCFullYear()}-` +
@@ -33,8 +57,8 @@ function fromMinutes(value) {
   );
 }
 
-// Select the earliest time that obeys the clock, pickup window,
-// and 60-minute spacing rule for this volunteer.
+// Choose the earliest planned pickup that meets the simulated clock,
+// donation pickup window, and volunteer's 60-minute spacing rule.
 function getDefaultPickupTime(data, donation, volunteerId) {
   const clockMinute = toMinutes(data.clock);
   const startMinute = toMinutes(donation.pickup_from);
@@ -49,7 +73,6 @@ function getDefaultPickupTime(data, donation, volunteerId) {
   }
 
   let candidate = Math.max(clockMinute, startMinute);
-
   if (candidate > endMinute) return "";
 
   const existingPickupTimes = (data.claims || [])
@@ -82,11 +105,12 @@ export default function App() {
   const [clock, setClock] = useState("");
   const [claimForms, setClaimForms] = useState({});
 
+  // Empty dates are initialized from the supplied simulated clock below.
   const [donationForm, setDonationForm] = useState({
     description: "",
     quantity_kg: "10",
-    pickup_from: "2026-03-10T18:00",
-    pickup_until: "2026-03-10T20:00",
+    pickup_from: "",
+    pickup_until: "",
   });
 
   async function load() {
@@ -118,6 +142,45 @@ export default function App() {
     load();
   }, []);
 
+  // PS-aligned donor defaults:
+  // pickup_from must be before pickup_until, and pickup_until must not be
+  // before the simulated clock. The PS does not independently prohibit a
+  // pickup_from earlier than now, so we do not enforce that restriction here.
+  useEffect(() => {
+    if (!data?.clock) return;
+
+    const now = toMinutes(data.clock);
+    if (!Number.isFinite(now)) return;
+
+    setDonationForm((previous) => {
+      const start = toMinutes(previous.pickup_from);
+      const end = toMinutes(previous.pickup_until);
+      const validWindow =
+        Number.isFinite(start) &&
+        Number.isFinite(end) &&
+        start < end &&
+        end >= now;
+
+      if (validWindow) return previous;
+
+      const nextStart = now;
+      const nextEnd = Number.isFinite(end) && end > nextStart
+        ? end
+        : nextStart + 60;
+
+      return {
+        ...previous,
+        pickup_from: fromMinutes(nextStart),
+        pickup_until: fromMinutes(nextEnd),
+      };
+    });
+  }, [data?.clock]);
+
+  // When switching volunteers, recalculate each default using that person's claims.
+  useEffect(() => {
+    setClaimForms({});
+  }, [personId]);
+
   const person =
     data?.donors.find((item) => item.id === personId) ||
     data?.volunteers.find((item) => item.id === personId);
@@ -145,8 +208,8 @@ export default function App() {
 
       setMessage(result.message || "Action completed successfully.");
 
-      // Recalculate default pickup times after the simulated clock changes.
-      if (path === "/clock") {
+      // Recalculate availability/defaults after time or claim state changes.
+      if (path === "/clock" || path === "/claims") {
         setClaimForms({});
       }
 
@@ -180,9 +243,7 @@ export default function App() {
   }
 
   const visibleDonations = data.donations.filter((donation) => {
-    if (isDonor) {
-      return donation.donor_id === personId;
-    }
+    if (isDonor) return donation.donor_id === personId;
 
     const volunteer = data.volunteers.find(
       (item) => item.id === personId
@@ -202,6 +263,15 @@ export default function App() {
     fromMinutes(
       Math.max(toMinutes(data.clock), toMinutes(donation.pickup_from))
     );
+
+  const pickupEndMinimum = fromMinutes(
+  Math.max(
+    toMinutes(data.clock),
+    Number.isFinite(toMinutes(donationForm.pickup_from))
+      ? toMinutes(donationForm.pickup_from) + 1
+      : toMinutes(data.clock)
+  )
+);
 
   return (
     <main className="app">
@@ -295,7 +365,6 @@ export default function App() {
           <form
             onSubmit={(event) => {
               event.preventDefault();
-
               action("/donations", {
                 donor_id: personId,
                 description: donationForm.description,
@@ -342,7 +411,7 @@ export default function App() {
               <input
                 required
                 type="datetime-local"
-                min={data.clock}
+                // The PS does not require pickup_from >= now.
                 value={donationForm.pickup_from}
                 onChange={(event) =>
                   setDonationForm((previous) => ({
@@ -358,7 +427,7 @@ export default function App() {
               <input
                 required
                 type="datetime-local"
-                min={donationForm.pickup_from}
+                min={pickupEndMinimum}
                 value={donationForm.pickup_until}
                 onChange={(event) =>
                   setDonationForm((previous) => ({
@@ -383,13 +452,11 @@ export default function App() {
           <div className="donation-grid">
             {visibleDonations.map((donation) => {
               const claimForm = claimForms[donation.id] || {};
-
               const defaultPickupTime = getDefaultPickupTime(
                 data,
                 donation,
                 personId
               );
-
               const quantity = claimForm.kg ?? "5";
               const plannedTime =
                 claimForm.planned_time ?? defaultPickupTime;
@@ -403,11 +470,9 @@ export default function App() {
 
                   <h3>{donation.description}</h3>
                   <p>
-                    {
-                      data.donors.find(
-                        (donor) => donor.id === donation.donor_id
-                      )?.name
-                    }
+                    {data.donors.find(
+                      (donor) => donor.id === donation.donor_id
+                    )?.name}
                   </p>
 
                   <div className="quantity">
@@ -423,7 +488,6 @@ export default function App() {
                   <form
                     onSubmit={(event) => {
                       event.preventDefault();
-
                       action("/claims", {
                         volunteer_id: personId,
                         donation_id: donation.id,
@@ -467,7 +531,6 @@ export default function App() {
                           )
                         }
                       />
-
                       {!plannedTime && (
                         <small className="muted">
                           No valid pickup time remains in this window.
@@ -506,7 +569,7 @@ export default function App() {
                   <span className="pill">{donation.status}</span>
                   <h3>{donation.description}</h3>
                   <p>
-                    {donation.remaining_kg} kg remaining of{" "}
+                    {donation.remaining_kg} kg remaining of {" "}
                     {donation.quantity_kg} kg
                   </p>
                   <p className="muted">
@@ -521,8 +584,7 @@ export default function App() {
                     relatedClaims.map((claim) => (
                       <p key={claim.id}>
                         {data.volunteers.find(
-                          (volunteer) =>
-                            volunteer.id === claim.volunteer_id
+                          (volunteer) => volunteer.id === claim.volunteer_id
                         )?.name || claim.volunteer_id}
                         {" · "}
                         {claim.kg} kg · {claim.status}
