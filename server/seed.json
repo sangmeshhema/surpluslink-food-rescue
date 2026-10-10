@@ -1,0 +1,125 @@
+{
+  "clock": "2026-03-10T12:00",
+  "donors": [
+    {
+      "id": "D1",
+      "name": "Spice Garden",
+      "zone": "NORTH"
+    },
+    {
+      "id": "D2",
+      "name": "Green Bowl",
+      "zone": "NORTH"
+    },
+    {
+      "id": "D3",
+      "name": "Harbor Bakery",
+      "zone": "SOUTH"
+    },
+    {
+      "id": "D4",
+      "name": "Sunrise Canteen",
+      "zone": "EAST"
+    },
+    {
+      "id": "D5",
+      "name": "Tandoor Tales",
+      "zone": "WEST"
+    }
+  ],
+  "volunteers": [
+    {
+      "id": "V1",
+      "name": "Rhea",
+      "capacity_kg": 20,
+      "zones": [
+        "NORTH",
+        "EAST"
+      ]
+    },
+    {
+      "id": "V2",
+      "name": "Kabir",
+      "capacity_kg": 15,
+      "zones": [
+        "NORTH"
+      ]
+    },
+    {
+      "id": "V3",
+      "name": "Meera",
+      "capacity_kg": 25,
+      "zones": [
+        "SOUTH"
+      ]
+    },
+    {
+      "id": "V4",
+      "name": "Imran",
+      "capacity_kg": 30,
+      "zones": [
+        "SOUTH",
+        "WEST"
+      ]
+    },
+    {
+      "id": "V5",
+      "name": "Divya",
+      "capacity_kg": 10,
+      "zones": [
+        "EAST"
+      ]
+    },
+    {
+      "id": "V6",
+      "name": "Lalit",
+      "capacity_kg": 18,
+      "zones": [
+        "WEST",
+        "NORTH"
+      ]
+    }
+  ],
+  "donations": [
+    {
+      "id": "DN1",
+      "donor_id": "D1",
+      "description": "Veg biryani",
+      "quantity_kg": 30,
+      "pickup_from": "2026-03-10T18:00",
+      "pickup_until": "2026-03-10T20:00"
+    },
+    {
+      "id": "DN2",
+      "donor_id": "D2",
+      "description": "Dal and rice",
+      "quantity_kg": 10,
+      "pickup_from": "2026-03-10T18:00",
+      "pickup_until": "2026-03-10T21:00"
+    },
+    {
+      "id": "DN3",
+      "donor_id": "D3",
+      "description": "Bread loaves",
+      "quantity_kg": 25,
+      "pickup_from": "2026-03-10T14:00",
+      "pickup_until": "2026-03-10T16:00"
+    },
+    {
+      "id": "DN4",
+      "donor_id": "D4",
+      "description": "Sandwiches",
+      "quantity_kg": 12,
+      "pickup_from": "2026-03-10T17:00",
+      "pickup_until": "2026-03-10T19:00"
+    },
+    {
+      "id": "DN5",
+      "donor_id": "D5",
+      "description": "Roti and sabzi",
+      "quantity_kg": 40,
+      "pickup_from": "2026-03-10T19:00",
+      "pickup_until": "2026-03-10T22:00"
+    }
+  ]
+}
