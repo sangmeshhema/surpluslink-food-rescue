@@ -55,20 +55,17 @@ The backend creates `server/data/state.json` when it initializes the application
 
 ## 5. Prerequisites
 
-Install Node.js and npm, then open the project folder in Visual Studio Code.
+- Node.js and npm
+- Visual Studio Code or another code editor
 
 ## 6. Installation
 
-From the project root, install the dependencies:
+Clone the repository and open the project directory:
 
 ```powershell
+git clone https://github.com/sangmeshhema/surpluslink-food-rescue.git
+cd surpluslink-food-rescue
 npm.cmd install
-```
-
-If the backend dependencies are not already installed, run:
-
-```powershell
-npm.cmd install express cors
 ```
 
 ## 7. Running the Application
@@ -79,21 +76,15 @@ Start the backend in the first terminal:
 npm.cmd run server
 ```
 
-The backend runs at:
-
-`http://localhost:5000`
-
 Start the frontend in a second terminal:
 
 ```powershell
 npm.cmd run dev
 ```
 
-Open the local URL printed by Vite, usually:
+Open the local URL printed by Vite, usually `http://localhost:5173`. The backend API is available at `http://localhost:5000`.
 
-`http://localhost:5173`
-
-If that port is occupied, use the alternative URL printed in the terminal.
+Use the commands defined in `package.json`. If the project does not start because a dependency is missing, check `package.json` before installing additional packages.
 
 ## 8. API Endpoints
 
